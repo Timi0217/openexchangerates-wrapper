@@ -314,56 +314,50 @@ HOME_HTML = """
             setTimeout(() => box.style.display = 'none', 5000);
         }
 
-        async function fetchHealth() {
+        async function fetchDashboard() {
             const t0 = Date.now();
             try {
-                await fetch('/health');
+                const res = await fetch('/dashboard');
+                const data = await res.json();
+
+                // Update health status
                 const ms = Date.now() - t0;
                 document.getElementById('dot').classList.add('on');
                 document.getElementById('health-text').textContent = 'online \\u00B7 ' + ms + 'ms';
-            } catch (e) {
-                document.getElementById('health-text').textContent = 'offline';
-            }
-        }
 
-        async function fetchHeroConversion() {
-            try {
-                const res = await fetch('/convert?from=USD&to=EUR&amount=100');
-                const data = await res.json();
-                document.getElementById('hero-result').textContent = data.result.toFixed(2);
-            } catch (e) {
-                showError('Failed to load hero conversion');
-            }
-        }
+                // Update hero conversion
+                if (data.hero && data.hero.result !== null) {
+                    document.getElementById('hero-result').textContent = data.hero.result.toFixed(2);
+                }
 
-        async function fetchLatestRates() {
-            try {
-                const res = await fetch('/latest');
-                const data = await res.json();
-                currentRates = data.rates;
+                // Update latest rates
+                if (data.latest && data.latest.rates) {
+                    currentRates = data.latest.rates;
 
-                majorCurrencies.forEach((cur, idx) => {
-                    const rate = currentRates[cur];
-                    if (rate) {
-                        const cards = document.querySelectorAll('.rate-card');
-                        const valueEl = cards[idx].querySelector('.rate-value');
-                        valueEl.textContent = rate.toFixed(4);
-                    }
-                });
-
-                if (data.last_updated) {
-                    const date = new Date(data.last_updated);
-                    const formatted = date.toLocaleString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        timeZoneName: 'short'
+                    majorCurrencies.forEach((cur, idx) => {
+                        const rate = currentRates[cur];
+                        if (rate) {
+                            const cards = document.querySelectorAll('.rate-card');
+                            const valueEl = cards[idx].querySelector('.rate-value');
+                            valueEl.textContent = rate.toFixed(4);
+                        }
                     });
-                    document.getElementById('timestamp').textContent = 'LAST UPDATED: ' + formatted;
+
+                    if (data.latest.last_updated) {
+                        const date = new Date(data.latest.last_updated);
+                        const formatted = date.toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            timeZoneName: 'short'
+                        });
+                        document.getElementById('timestamp').textContent = 'LAST UPDATED: ' + formatted;
+                    }
                 }
             } catch (e) {
-                showError('Failed to load exchange rates');
+                document.getElementById('health-text').textContent = 'offline';
+                showError('Failed to load dashboard data');
             }
         }
 
@@ -397,11 +391,7 @@ HOME_HTML = """
             });
         });
 
-        Promise.all([
-            fetchHealth(),
-            fetchHeroConversion(),
-            fetchLatestRates()
-        ]);
+        fetchDashboard();
     </script>
 </body>
 </html>
@@ -562,5 +552,55 @@ async def list_currencies():
     return {
         "currencies": data,
         "count": len(data),
+        "timestamp": _ts(),
+    }
+
+
+@app.get("/dashboard")
+async def get_dashboard():
+    """Fetch all homepage data in a single request."""
+    import asyncio
+
+    # Health check
+    health_data = {"status": "healthy", "timestamp": _ts()}
+
+    # Small delay between requests
+    await asyncio.sleep(0.1)
+
+    # Hero conversion: 100 USD to EUR
+    try:
+        data = await _oxr_request("latest.json")
+        rates = data.get("rates", {})
+        eur_rate = rates.get("EUR", 0)
+        hero_result = 100 * eur_rate
+    except Exception:
+        hero_result = None
+
+    await asyncio.sleep(0.1)
+
+    # Latest rates for display
+    try:
+        latest_data = await _oxr_request("latest.json")
+        rates_obj = latest_data.get("rates", {})
+        last_updated = datetime.fromtimestamp(
+            latest_data.get("timestamp", 0), tz=timezone.utc
+        ).isoformat() if latest_data.get("timestamp") else None
+    except Exception:
+        rates_obj = {}
+        last_updated = None
+
+    return {
+        "health": health_data,
+        "hero": {
+            "from": "USD",
+            "to": "EUR",
+            "amount": 100,
+            "result": round(hero_result, 2) if hero_result else None,
+        },
+        "latest": {
+            "base": "USD",
+            "rates": rates_obj,
+            "last_updated": last_updated,
+        },
         "timestamp": _ts(),
     }
