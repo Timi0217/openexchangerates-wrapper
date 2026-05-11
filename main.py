@@ -70,16 +70,25 @@ HOME_HTML = """
             color: #27AE60;
             font-size: 24px;
             font-family: 'Courier New', monospace;
-            font-style: italic;
-            font-weight: 600;
+            font-weight: 700;
         }
-        .badge {
-            background: rgba(39,174,96,.2);
-            color: #27AE60;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 500;
+        .health {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #555;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .health .d {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #555;
+            transition: background .3s;
+        }
+        .health .d.on {
+            background: #4CAF50;
         }
         .subtitle {
             color: #888;
@@ -225,7 +234,7 @@ HOME_HTML = """
         <div class="card">
             <div class="header">
                 <h1>Open Exchange Rates</h1>
-                <div class="badge" id="health-badge">\\u2022 checking</div>
+                <div class="health"><span class="d" id="dot"></span><span id="health-text">connecting...</span></div>
             </div>
             <p class="subtitle">Real-time forex conversion, 170+ fiat currencies</p>
 
@@ -306,12 +315,14 @@ HOME_HTML = """
         }
 
         async function fetchHealth() {
+            const t0 = Date.now();
             try {
-                const res = await fetch('/health');
-                const data = await res.json();
-                document.getElementById('health-badge').textContent = '\\u2022 ' + data.status;
+                await fetch('/health');
+                const ms = Date.now() - t0;
+                document.getElementById('dot').classList.add('on');
+                document.getElementById('health-text').textContent = 'online \\u00B7 ' + ms + 'ms';
             } catch (e) {
-                document.getElementById('health-badge').textContent = '\\u2022 error';
+                document.getElementById('health-text').textContent = 'offline';
             }
         }
 
