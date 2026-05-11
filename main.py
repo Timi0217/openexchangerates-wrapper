@@ -4,6 +4,7 @@ from typing import Optional
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import HTMLResponse
 import httpx
 
 
@@ -26,6 +27,374 @@ app = FastAPI(title="Open Exchange Rates Wrapper", lifespan=lifespan)
 
 def _ts() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+HOME_HTML = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open Exchange Rates</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            padding: 24px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 640px;
+            margin: 0 auto;
+            opacity: 0;
+            animation: fadeIn 0.6s ease forwards;
+        }
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+        .card {
+            background: rgba(255,255,255,.03);
+            border: 1px solid rgba(255,255,255,.07);
+            border-radius: 16px;
+            padding: 32px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        h1 {
+            color: #27AE60;
+            font-size: 24px;
+            font-family: 'Courier New', monospace;
+            font-style: italic;
+            font-weight: 600;
+        }
+        .badge {
+            background: rgba(39,174,96,.2);
+            color: #27AE60;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .subtitle {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+        .hero {
+            text-align: center;
+            margin-bottom: 32px;
+            padding: 24px;
+            background: rgba(39,174,96,.05);
+            border-radius: 12px;
+            border: 1px solid rgba(39,174,96,.1);
+        }
+        .hero-conversion {
+            font-size: 18px;
+            color: #aaa;
+            margin-bottom: 12px;
+        }
+        .hero-result {
+            font-size: 48px;
+            font-family: 'Courier New', monospace;
+            color: #27AE60;
+            font-weight: 700;
+        }
+        .hero-currency {
+            font-size: 28px;
+            color: #27AE60;
+            margin-left: 8px;
+        }
+        .rates-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .rate-card {
+            background: rgba(255,255,255,.02);
+            border: 1px solid rgba(255,255,255,.05);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+        .rate-emoji {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        .rate-code {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 4px;
+        }
+        .rate-value {
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            color: #27AE60;
+            font-weight: 600;
+        }
+        .timestamp {
+            text-align: center;
+            font-size: 11px;
+            color: #555;
+            margin-bottom: 32px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .form-section {
+            border-top: 1px solid rgba(255,255,255,.07);
+            padding-top: 24px;
+        }
+        .form-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        input, select {
+            flex: 1;
+            background: rgba(255,255,255,.05);
+            border: 1px solid rgba(255,255,255,.1);
+            border-radius: 8px;
+            padding: 12px;
+            color: #fff;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        input::placeholder {
+            color: #666;
+        }
+        button {
+            width: 100%;
+            background: #27AE60;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 14px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #229954;
+        }
+        .try-currencies {
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            margin-top: 12px;
+        }
+        .try-currencies span {
+            color: #27AE60;
+            cursor: pointer;
+            margin: 0 4px;
+        }
+        .try-currencies span:hover {
+            text-decoration: underline;
+        }
+        .error {
+            background: rgba(231,76,60,.1);
+            border: 1px solid rgba(231,76,60,.3);
+            color: #e74c3c;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+        .result-display {
+            background: rgba(39,174,96,.1);
+            border: 1px solid rgba(39,174,96,.2);
+            color: #27AE60;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 18px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <h1>Open Exchange Rates</h1>
+                <div class="badge" id="health-badge">\\u2022 checking</div>
+            </div>
+            <p class="subtitle">Real-time forex conversion, 170+ fiat currencies</p>
+
+            <div id="error-box" class="error" style="display:none;"></div>
+
+            <div class="hero">
+                <div class="hero-conversion">100 USD =</div>
+                <div>
+                    <span class="hero-result" id="hero-result">--</span>
+                    <span class="hero-currency">EUR</span>
+                </div>
+            </div>
+
+            <div class="rates-grid" id="rates-grid">
+                <div class="rate-card">
+                    <div class="rate-emoji">\\ud83c\\uddea\\ud83c\\uddfa</div>
+                    <div class="rate-code">EUR</div>
+                    <div class="rate-value">--</div>
+                </div>
+                <div class="rate-card">
+                    <div class="rate-emoji">\\ud83c\\uddec\\ud83c\\udde7</div>
+                    <div class="rate-code">GBP</div>
+                    <div class="rate-value">--</div>
+                </div>
+                <div class="rate-card">
+                    <div class="rate-emoji">\\ud83c\\uddef\\ud83c\\uddf5</div>
+                    <div class="rate-code">JPY</div>
+                    <div class="rate-value">--</div>
+                </div>
+                <div class="rate-card">
+                    <div class="rate-emoji">\\ud83c\\udde8\\ud83c\\udded</div>
+                    <div class="rate-code">CHF</div>
+                    <div class="rate-value">--</div>
+                </div>
+                <div class="rate-card">
+                    <div class="rate-emoji">\\ud83c\\udde8\\ud83c\\udde6</div>
+                    <div class="rate-code">CAD</div>
+                    <div class="rate-value">--</div>
+                </div>
+                <div class="rate-card">
+                    <div class="rate-emoji">\\ud83c\\udde6\\ud83c\\uddfa</div>
+                    <div class="rate-code">AUD</div>
+                    <div class="rate-value">--</div>
+                </div>
+            </div>
+
+            <div class="timestamp" id="timestamp">LAST UPDATED: --</div>
+
+            <div class="form-section">
+                <div id="result-display" class="result-display"></div>
+                <form id="convert-form">
+                    <div class="form-row">
+                        <input type="number" id="amount" value="100" step="0.01" min="0" placeholder="Amount">
+                        <input type="text" id="from" value="USD" placeholder="From" maxlength="3" style="text-transform:uppercase;">
+                        <input type="text" id="to" value="EUR" placeholder="To" maxlength="3" style="text-transform:uppercase;">
+                    </div>
+                    <button type="submit">\\u2192 convert</button>
+                </form>
+                <div class="try-currencies">
+                    Try: <span data-pair="GBP">GBP</span> \\u00b7
+                    <span data-pair="JPY">JPY</span> \\u00b7
+                    <span data-pair="CHF">CHF</span> \\u00b7
+                    <span data-pair="CAD">CAD</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const majorCurrencies = ['EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD'];
+        let currentRates = {};
+
+        function showError(msg) {
+            const box = document.getElementById('error-box');
+            box.textContent = msg;
+            box.style.display = 'block';
+            setTimeout(() => box.style.display = 'none', 5000);
+        }
+
+        async function fetchHealth() {
+            try {
+                const res = await fetch('/health');
+                const data = await res.json();
+                document.getElementById('health-badge').textContent = '\\u2022 ' + data.status;
+            } catch (e) {
+                document.getElementById('health-badge').textContent = '\\u2022 error';
+            }
+        }
+
+        async function fetchHeroConversion() {
+            try {
+                const res = await fetch('/convert?from=USD&to=EUR&amount=100');
+                const data = await res.json();
+                document.getElementById('hero-result').textContent = data.result.toFixed(2);
+            } catch (e) {
+                showError('Failed to load hero conversion');
+            }
+        }
+
+        async function fetchLatestRates() {
+            try {
+                const res = await fetch('/latest');
+                const data = await res.json();
+                currentRates = data.rates;
+
+                majorCurrencies.forEach((cur, idx) => {
+                    const rate = currentRates[cur];
+                    if (rate) {
+                        const cards = document.querySelectorAll('.rate-card');
+                        const valueEl = cards[idx].querySelector('.rate-value');
+                        valueEl.textContent = rate.toFixed(4);
+                    }
+                });
+
+                if (data.last_updated) {
+                    const date = new Date(data.last_updated);
+                    const formatted = date.toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        timeZoneName: 'short'
+                    });
+                    document.getElementById('timestamp').textContent = 'LAST UPDATED: ' + formatted;
+                }
+            } catch (e) {
+                showError('Failed to load exchange rates');
+            }
+        }
+
+        async function convertCurrency(from, to, amount) {
+            try {
+                const res = await fetch(`/convert?from=${from}&to=${to}&amount=${amount}`);
+                const data = await res.json();
+                const resultBox = document.getElementById('result-display');
+                resultBox.textContent = `${amount} ${from} = ${data.result.toFixed(4)} ${to}`;
+                resultBox.style.display = 'block';
+            } catch (e) {
+                showError('Conversion failed. Check currency codes.');
+            }
+        }
+
+        document.getElementById('convert-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const amount = parseFloat(document.getElementById('amount').value) || 1;
+            const from = document.getElementById('from').value.toUpperCase() || 'USD';
+            const to = document.getElementById('to').value.toUpperCase() || 'EUR';
+            convertCurrency(from, to, amount);
+        });
+
+        document.querySelectorAll('.try-currencies span').forEach(span => {
+            span.addEventListener('click', () => {
+                const cur = span.getAttribute('data-pair');
+                document.getElementById('to').value = cur;
+                const amount = parseFloat(document.getElementById('amount').value) || 1;
+                const from = document.getElementById('from').value.toUpperCase() || 'USD';
+                convertCurrency(from, cur, amount);
+            });
+        });
+
+        Promise.all([
+            fetchHealth(),
+            fetchHeroConversion(),
+            fetchLatestRates()
+        ]);
+    </script>
+</body>
+</html>
+"""
 
 
 def _get_app_id() -> str:
@@ -70,17 +439,7 @@ async def _oxr_request(endpoint: str, params: dict | None = None) -> dict:
 
 @app.get("/")
 async def root():
-    return {
-        "name": "Open Exchange Rates Wrapper",
-        "description": "170+ fiat currency exchange rates, real-time and historical, with conversion",
-        "endpoints": [
-            {"path": "/latest", "description": "Get latest exchange rates (base USD)"},
-            {"path": "/convert?from=USD&to=EUR&amount=100", "description": "Convert currency"},
-            {"path": "/historical?date=2024-01-15", "description": "Get historical rates"},
-            {"path": "/currencies", "description": "List all supported currencies"},
-            {"path": "/health", "description": "Health check"},
-        ],
-    }
+    return HTMLResponse(content=HOME_HTML)
 
 
 @app.get("/health")
