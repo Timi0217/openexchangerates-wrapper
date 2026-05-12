@@ -250,32 +250,32 @@ HOME_HTML = """
 
             <div class="rates-grid" id="rates-grid">
                 <div class="rate-card">
-                    <div class="rate-emoji">\\ud83c\\uddea\\ud83c\\uddfa</div>
+                    <div class="rate-emoji">&#x1F1EA;&#x1F1FA;</div>
                     <div class="rate-code">EUR</div>
                     <div class="rate-value">--</div>
                 </div>
                 <div class="rate-card">
-                    <div class="rate-emoji">\\ud83c\\uddec\\ud83c\\udde7</div>
+                    <div class="rate-emoji">&#x1F1EC;&#x1F1E7;</div>
                     <div class="rate-code">GBP</div>
                     <div class="rate-value">--</div>
                 </div>
                 <div class="rate-card">
-                    <div class="rate-emoji">\\ud83c\\uddef\\ud83c\\uddf5</div>
+                    <div class="rate-emoji">&#x1F1EF;&#x1F1F5;</div>
                     <div class="rate-code">JPY</div>
                     <div class="rate-value">--</div>
                 </div>
                 <div class="rate-card">
-                    <div class="rate-emoji">\\ud83c\\udde8\\ud83c\\udded</div>
+                    <div class="rate-emoji">&#x1F1E8;&#x1F1ED;</div>
                     <div class="rate-code">CHF</div>
                     <div class="rate-value">--</div>
                 </div>
                 <div class="rate-card">
-                    <div class="rate-emoji">\\ud83c\\udde8\\ud83c\\udde6</div>
+                    <div class="rate-emoji">&#x1F1E8;&#x1F1E6;</div>
                     <div class="rate-code">CAD</div>
                     <div class="rate-value">--</div>
                 </div>
                 <div class="rate-card">
-                    <div class="rate-emoji">\\ud83c\\udde6\\ud83c\\uddfa</div>
+                    <div class="rate-emoji">&#x1F1E6;&#x1F1FA;</div>
                     <div class="rate-code">AUD</div>
                     <div class="rate-value">--</div>
                 </div>
@@ -291,12 +291,12 @@ HOME_HTML = """
                         <input type="text" id="from" value="USD" placeholder="From" maxlength="3" style="text-transform:uppercase;">
                         <input type="text" id="to" value="EUR" placeholder="To" maxlength="3" style="text-transform:uppercase;">
                     </div>
-                    <button type="submit">\\u2192 convert</button>
+                    <button type="submit">&rarr; convert</button>
                 </form>
                 <div class="try-currencies">
-                    Try: <span data-pair="GBP">GBP</span> \\u00b7
-                    <span data-pair="JPY">JPY</span> \\u00b7
-                    <span data-pair="CHF">CHF</span> \\u00b7
+                    Try: <span data-pair="GBP">GBP</span> &middot;
+                    <span data-pair="JPY">JPY</span> &middot;
+                    <span data-pair="CHF">CHF</span> &middot;
                     <span data-pair="CAD">CAD</span>
                 </div>
             </div>
@@ -323,7 +323,7 @@ HOME_HTML = """
                 // Update health status
                 const ms = Date.now() - t0;
                 document.getElementById('dot').classList.add('on');
-                document.getElementById('health-text').textContent = 'online \\u00B7 ' + ms + 'ms';
+                document.getElementById('health-text').textContent = 'online \u00B7 ' + ms + 'ms';
 
                 // Update hero conversion
                 if (data.hero && data.hero.result !== null) {
